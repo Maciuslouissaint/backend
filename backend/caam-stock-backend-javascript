@@ -1,0 +1,20 @@
+const express = require('express');
+const cors = require('cors');
+require('dotenv').config();
+
+const app = express();
+const PORT = process.env.PORT || 4000;
+
+// Middlewares
+app.use(cors());
+app.use(express.json());
+
+// Ruta de prueba inicial
+app.get('/', (req, res) => {
+    res.json({ message: 'Bienvenido a la API de CAAM Stock' });
+});
+
+// Arrancar el servidor
+app.listen(PORT, () => {
+    console.log(`Servidor de CAAM Stock corriendo en http://localhost:${PORT}`);
+});

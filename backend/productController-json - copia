@@ -1,0 +1,114 @@
+const fs = require('fs');
+const path = require('path');
+
+const filePath = path.join(__dirname, '../data/products.json');
+
+const readDataFromFile = () => {
+  const rawData = fs.readFileSync(filePath, 'utf-8');
+  return JSON.parse(rawData);
+};
+
+const writeDataToFile = (data) => {
+  fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf-8');
+};
+
+// 1. Agregar un nuevo producto al inventario
+const addProduct = (req, res) => {
+  try {
+    const { title, price, stock, imageUrl } = req.body;
+
+    if (!title || price === undefined || stock === undefined) {
+      return res.status(400).json({ error: 'Faltan campos obligatorios (title, price, stock)' });
+    }
+
+    const data = readDataFromFile();
+
+    const newProduct = {
+      id: Date.now().toString(), // ID único basado en timestamp
+      title,
+      price: Number(price),
+      stock: Number(stock),
+      status: Number(stock) > 0 ? 'available' : 'out_of_stock',
+      imageUrl: imageUrl || 'https://via.placeholder.com/150'
+    };
+
+    data.products.push(newProduct);
+    writeDataToFile(data);
+
+    res.status(201).json({
+      success: true,
+      message: 'Producto agregado exitosamente',
+      product: newProduct
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Error al agregar el producto' });
+  }
+};
+
+// 2. Actualizar stock o precio de un producto
+const updateProduct = (req, res) => {
+  try {
+    const { id } = req.params;
+    const { title, price, stock, imageUrl } = req.body;
+
+    const data = readDataFromFile();
+    const productIndex = data.products.findIndex(p => p.id === id);
+
+    if (productIndex === -1) {
+      return res.status(404).json({ error: 'Producto no encontrado' });
+    }
+
+    // Actualizamos campos si se envían
+    const currentProduct = data.products[productIndex];
+    const updatedStock = stock !== undefined ? Number(stock) : currentProduct.stock;
+
+    data.products[productIndex] = {
+      ...currentProduct,
+      title: title || currentProduct.title,
+      price: price !== undefined ? Number(price) : currentProduct.price,
+      stock: updatedStock,
+      status: updatedStock > 0 ? 'available' : 'out_of_stock',
+      imageUrl: imageUrl || currentProduct.imageUrl
+    };
+
+    writeDataToFile(data);
+
+    res.json({
+      success: true,
+      message: 'Producto actualizado exitosamente',
+      product: data.products[productIndex]
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Error al actualizar el producto' });
+  }
+};
+
+// 3. Eliminar un producto
+const deleteProduct = (req, res) => {
+  try {
+    const { id } = req.params;
+    const data = readDataFromFile();
+
+    const filteredProducts = data.products.filter(p => p.id !== id);
+
+    if (filteredProducts.length === data.products.length) {
+      return res.status(404).json({ error: 'Producto no encontrado' });
+    }
+
+    data.products = filteredProducts;
+    writeDataToFile(data);
+
+    res.json({
+      success: true,
+      message: 'Producto eliminado correctamente'
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Error al eliminar el producto' });
+  }
+};
+
+module.exports = {
+  addProduct,
+  updateProduct,
+  deleteProduct
+};

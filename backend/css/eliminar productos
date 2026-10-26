@@ -1,0 +1,195 @@
+
+const fs = require('fs');
+const path = require('path');
+
+const filePath = path.join(__dirname, '../data/products.json');
+
+// Leer los datos de los productos
+function readData() {
+  const rawData = fs.readFileSync(filePath, 'utf8');
+  return JSON.parse(rawData);
+}
+
+// Guardar los datos de los productos
+function saveData(data) {
+  fs.writeFileSync(
+    filePath,
+    JSON.stringify(data, null, 2),
+    'utf8'
+  );
+}
+
+// Obtener todos los productos
+function getProducts(req, res) {
+  try {
+    const data = readData();
+    res.json({
+      success: true,
+      products: data.products
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: 'Error al obtener los productos'
+    });
+  }
+}
+
+// Agregar un producto
+function addProduct(req, res) {
+  try {
+    const { title, price, stock, imageUrl } = req.body;
+
+    if (
+      !title ||
+      price === undefined ||
+      stock === undefined ||
+      title.trim() === '' ||
+      !Number.isFinite(Number(price)) ||
+      Number(price) < 0 ||
+      !Number.isInteger(Number(stock)) ||
+      Number(stock) < 0
+    ) {
+      return res.status(400).json({
+        success: false,
+        error: 'Ingresa un nombre, precio y stock válidos'
+      });
+    }
+
+    const data = readData();
+
+    const newProduct = {
+      id: Date.now().toString(),
+      title: title.trim(),
+      price: Number(price),
+      stock: Number(stock),
+      status: Number(stock) > 0 ? 'available' : 'out_of_stock',
+      imageUrl: imageUrl || 'https://placehold.co/150'
+    };
+
+    data.products.push(newProduct);
+    saveData(data);
+
+    res.status(201).json({
+      success: true,
+      message: 'Producto agregado correctamente',
+      product: newProduct
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: 'Error al agregar el producto'
+    });
+  }
+}
+
+// Editar un producto
+function updateProduct(req, res) {
+  try {
+    const { id } = req.params;
+    const { title, price, stock, imageUrl } = req.body;
+
+    const data = readData();
+    const product = data.products.find(
+      item => item.id === id
+    );
+
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        error: 'Producto no encontrado'
+      });
+    }
+
+    if (title !== undefined) {
+      if (typeof title !== 'string' || !title.trim()) {
+        return res.status(400).json({
+          success: false,
+          error: 'El nombre no puede estar vacío'
+        });
+      }
+      product.title = title.trim();
+    }
+
+    if (price !== undefined) {
+      if (!Number.isFinite(Number(price)) || Number(price) < 0) {
+        return res.status(400).json({
+          success: false,
+          error: 'El precio debe ser válido y no negativo'
+        });
+      }
+      product.price = Number(price);
+    }
+
+    if (stock !== undefined) {
+      if (!Number.isInteger(Number(stock)) || Number(stock) < 0) {
+        return res.status(400).json({
+          success: false,
+          error: 'El stock debe ser un entero no negativo'
+        });
+      }
+      product.stock = Number(stock);
+    }
+
+    if (imageUrl !== undefined) {
+      product.imageUrl = imageUrl;
+    }
+
+    product.status = product.stock > 0
+      ? 'available'
+      : 'out_of_stock';
+
+    saveData(data);
+
+    res.json({
+      success: true,
+      message: 'Producto actualizado correctamente',
+      product
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: 'Error al actualizar el producto'
+    });
+  }
+}
+
+// Eliminar un producto
+function deleteProduct(req, res) {
+  try {
+    const { id } = req.params;
+    const data = readData();
+
+    const index = data.products.findIndex(
+      item => item.id === id
+    );
+
+    if (index === -1) {
+      return res.status(404).json({
+        success: false,
+        error: 'Producto no encontrado'
+      });
+    }
+
+    const deletedProduct = data.products.splice(index, 1)[0];
+    saveData(data);
+
+    res.json({
+      success: true,
+      message: 'Producto eliminado correctamente',
+      product: deletedProduct
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: 'Error al eliminar el producto'
+    });
+  }
+}
+
+module.exports = {
+  getProducts,
+  addProduct,
+  updateProduct,
+  deleteProduct
+};
