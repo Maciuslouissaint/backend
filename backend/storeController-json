@@ -1,0 +1,33 @@
+const fs = require('fs');
+const path = require('path');
+
+// Función auxiliar para leer el archivo JSON
+const readDataFromFile = () => {
+  const filePath = path.join(__dirname, '../data/products.json');
+  const rawData = fs.readFileSync(filePath, 'utf-8');
+  return JSON.parse(rawData);
+};
+
+// Obtener la información de la tienda y sus productos por su slug (ej: /api/stores/caam-stock)
+const getStoreBySlug = (req, res) => {
+  try {
+    const { slug } = req.params;
+    const data = readDataFromFile();
+
+    if (data.store.slug !== slug) {
+      return res.status(404).json({ error: 'Tienda no encontrada' });
+    }
+
+    res.json({
+      success: true,
+      store: data.store,
+      products: data.products
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Error al obtener los datos de la tienda' });
+  }
+};
+
+module.exports = {
+  getStoreBySlug
+};
