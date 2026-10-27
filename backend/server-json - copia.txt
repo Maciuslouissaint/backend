@@ -19,7 +19,7 @@ app.use('/api/products', productRoutes);
 
 // Ruta raíz de bienvenida
 app.get('/', (req, res) => {
-  res.json({ message: 'Bienvenido a la API de CAAM Stock 🚀' });
+  res.json({ message: 'Bienvenido a la API de CAAM Stoc' });
 });
 
 // Arrancar el servidor
